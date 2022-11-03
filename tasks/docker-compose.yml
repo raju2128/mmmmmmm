@@ -1,0 +1,54 @@
+
+# Managing Tomcat
+# For security, access to the manager webapp is restricted. Users are defined in:
+
+# $CATALINA_HOME/conf/tomcat-users.xml
+---
+version: '3.8'
+services:
+ myjenkins:
+  image: jenkins/jenkins
+  ports:
+   - 5050:8080
+  labels:
+   - "traefik.port=80"
+  labels:
+   - "traefik.frontend.rule=Host(`kanna.king2128.xyz`)"
+  deploy:
+   replicas: 1
+   placement:
+    constraints:
+     - node.hostname == Docker
+
+ qaserver:
+  image: tomee
+  ports:
+   - 6060:8080
+  labels:
+   - "traefik.port=80"
+  labels:
+   - "traefik.frontend.rule=Host(`king.king2128.xyz`)" 
+  deploy:
+   replicas: 2
+   placement:
+    constraints:
+     - node.hostname == ip-172-31-6-216
+
+ prodserver:
+  image: tomee
+  ports:
+   - 7070:8080
+  labels:
+   - "traefik.port=80"
+  labels:
+   - "traefik.frontend.rule=Host(`padma.king2128.xyz`)" 
+  deploy:
+   replicas: 2
+   placement:
+    constraints:
+     - node.hostname == ip-172-31-11-90
+networks:
+ traefik-net:
+  external: true
+   name: traefik-net
+...

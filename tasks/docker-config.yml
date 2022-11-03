@@ -1,0 +1,20 @@
+# Store configuration data using Docker Config
+# docker config not work in docker stack
+
+docker service create --name myservice1 --config src=myconfig,target=/var/www/html/index.html -p 8080:80 ubuntu/apache2
+---
+version: '3.8'
+services:
+  webserver:
+    image: ubuntu/apache2
+    ports:
+      - 9090:80
+    configs:
+      - source: my_config
+        target: /var/www/html/index.html
+configs:
+  my_config:
+    file: ./index.html
+  my_other_config:
+    external: true        
+...

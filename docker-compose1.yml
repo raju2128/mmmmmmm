@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+ mydb:
+  image: postgres
+  environment:
+   POSTGRES_PASSWORD: king2128
+   POSTGRES_USER: myuser
+   POSTGRES_DB: mydb
+  container_name: mydb 
+ myadminer:
+  image: adminer
+  ports:
+   - 8888:8080
+  container_name: myadminer
+  links:
+   - mydb:postgres

@@ -1,0 +1,55 @@
+# Using Traefik with Docker Swarm For Deploying web/app Applications
+# If you haven't already, create a swarm cluster with 1 manager node and at least 2 worker node. 
+# It will take you less than 5 minutes and sounds harder than it is.
+# Once we have our swarm, we need to create an overlay network for traefik to use.
+
+docker network create --driver=overlay traefik-net
+
+# Now we need to deploy Traefik as a service in our cluster.
+docker service create \
+    --name traefik \
+    --constraint=node.role==manager \
+    --publish 80:80 \
+    --publish 8080:8080 \
+    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+    --network traefik-net \
+    traefik:v1.6 \
+    --docker \
+    --docker.swarmmode \
+    --docker.domain=traefik \
+    --docker.watch \
+    --web
+#docker compose file for above
+version: "3.3"
+
+services:
+  traefik:
+    image: "traefik:v2.6"
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker
+      - --api.insecure
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  my-app:
+    image: traefik/whoami:v1.7.1
+    labels:
+      - "traefik.http.routers.my-app.rule=Host(`whoami.docker.localhost`)"
+
+# Dashboard (https://localhost:8080)
+# Route (http://whoami.docker.localhost/)
+
+# create service
+docker service create \
+    --name app1 \
+    --label traefik.port=80 \
+    --network traefik-net \
+    --label traefik.frontend.rule=Host:app1.king2128.xyz\
+    nginx
+
+
+# We steup loadbalencer, target-groups and route-53 in AWS

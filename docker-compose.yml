@@ -1,0 +1,258 @@
+# USeCase
+# ==============
+# Create a docker compose file to setup a mysql and wordpress 
+# container and link them
+---
+version: '3.8'
+services:
+ mydb:
+  image: mysql:5
+  environment:
+   MYSQL_ROOT_PASSWORD: king2128
+
+ mywp:
+  image: wordpress
+  ports:
+   - 8888:80
+  links:
+   - mydb:mysql
+...
+# UseCase
+# =================
+# Create a docker compsoe file to setup the CI-CD environment
+# where a jenkins container is linked with 2 tomee containers
+# one for qaserver and other for prodserver
+---
+version: '3.8'
+services:
+ myjenkins:
+  image: jenkins/jenkins
+  ports:
+   - 5050:8080
+
+ qaserver:
+  image: tomee
+  ports:
+   - 6060:8080
+  links:
+   - myjenkins:jenkins
+
+ prodserver:
+  image: tomee
+  ports:
+   - 7070:8080
+  links:
+   - myjenkins:jenkins
+...   
+
+# Create a docker compose file to setup the LAMP architecture
+# vim lamp.yml
+---
+version: '3.8'
+services:
+ mydb:
+  image: mysql
+  environment:
+   MYSQL_ROOT_PASSWORD: king2128
+
+ apache:
+  image: httpd
+  ports:
+   - 5901:5900
+  links:
+   - mydb:mysql
+
+ php:
+  image: php:7.2-apache
+  links:
+   - mydb:mysql
+   - apache:httpd
+...      
+
+---
+version: '3.8'
+services:
+ hub:
+  image: selenium/hub
+  ports:
+   - 4444:4444
+ chrome:
+  image: selenium/node-chrome-debug
+  ports:
+   - 5901:5900
+  links:
+   - hub:selenium
+ firefox:
+  image: selenium/node-firefox-debug
+  ports:
+   - 5902:5900
+  links:
+   - hub:selenium
+...       
+
+## Multi container architecture communicates using single network
+version: '3.8'
+services:
+ mydb:
+  image: postgres
+  environment:
+   POSTGRES_PASSWORD: king2128
+   POSTGRES_USER: myuser
+   POSTGRES_DB: mydb
+  container_name: mydb 
+ myadminer:
+  image: adminer
+  ports:
+   - 8888:8080
+  container_name: myadminer
+
+network:
+ default:
+  name: net1
+
+## "Build dockerfile through docker-compose" i.e. custmaized image and container from that image created by- 
+# -docker-compose file not through dockerfile ###
+### here the dockerfile can't execute directly--> the docker-compose file execute .
+version: '3.8'
+services:
+ myjenkins:
+  build: .
+## here . means pwd it pick up the dockerfile from pwd
+  ports:
+   - 5050:8080
+  container_name: myjenkins
+ mytomcat:
+  image: tomee
+  ports:
+   - 6060:8080 
+   #here myjenkins created created from dockerfile and tomcat container created from docker.hub  
+
+#### create networks and volumes for containers and  attach that networks and volumes to containers ####
+---
+version: '3.8'
+services:
+ myjenkins:
+  image: jenkins/jenkins
+  ports:
+   - 5050:8080
+  container_name: myjenkins
+  networks:
+   - abc
+  volumes:
+   - myjenkins: #find default path of jenkins
+
+ qaserver:
+  image: tomee
+  ports:
+   - 6060:8080
+  container_name: mytomcat
+  networks:
+   - xyz
+  volumes:
+   - myqa:/usr/local/tomcat
+
+ prodserver:
+  image: tomee
+  ports:
+   - 7070:8080
+  container_name: prodserver
+  networks:
+   - xyz
+  volumes:
+   -  mypd:/usr/local/tomcat
+
+networks:
+ abc: {}
+ xyz: {}
+volumes:
+ db:
+ myqa:
+ mypd:
+...
+
+#### Docker-Compose + Docker Swarm = Docker Stack ####
+###======> Here we set up multicontainer architecture through docker stack. Here we control the replicas distrubution into servers <===#### 
+---
+version: '3.8'
+services:
+ myjenkins:
+  image: jenkins/jenkins
+  ports:
+   - 9090:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.hostname ==  WOrker1
+
+ qaserver:
+  image: tomee
+  ports:
+   - 7070:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.hostname == Worker2
+
+ prodserver:
+  image: tomee
+  ports:
+   - 6060:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.hostname ==  Manager
+...     
+
+### put a upper-limit on the container that we created ####
+---
+version: '3.8'
+services:
+ hub:
+  image: selenium/hub
+  ports:
+   - 4444:4444
+  deploy:
+   replicas: 2
+   resources:
+    reservations:
+     memory: "100M"
+     cpus: "0.25"
+    limits:
+     memory: "200M"
+     cpus: "0.5"
+
+ chrome:
+  image: selenium/node-chrome-debug
+  ports:
+   - 5901:5900
+  deploy:
+   replicas: 2
+   resources:
+    reservations:
+     memory: "100M"
+     cpus: "0.25"   
+    limits:
+     memory: "300M"
+     cpus: "0.5"
+
+ firefox:
+  image: selenium/node-firefox-debug
+  ports:
+   - 5902:5900
+  deploy:
+   replicas: 2
+   resources:
+    reservations:
+     memory: "100M"
+     cpus: "0.25"
+    limits:
+     memory: "300M"
+     cpus: "0.5"
+...
+
+
+
+      

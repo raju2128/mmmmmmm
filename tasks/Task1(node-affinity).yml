@@ -1,0 +1,46 @@
+# create labels to 2 workers
+# docker node update --help
+# Options:
+#       --availability string   Availability of the node ("active"|"pause"|"drain")
+#       --label-add list        Add or update a node label (key=value)
+#       --label-rm list         Remove a node label if exists
+#       --role string           Role of the node ("worker"|"manager") 
+
+# docker node update --label-add=perf=high worker1_ip
+# docker node update --label-add=perf=low worker2_ip
+
+#create docker stack file
+
+version: '3.8'
+
+services:
+ myjenkins:
+  image: jenkins/jenkins
+  ports:
+   - 5050:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.hostname == manager
+
+ qaserver:
+  image: tomcat
+  ports:
+   - 6060:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.labels.perf == high
+
+ prodserver:
+  image: tomcat
+  ports:
+   - 7070:8080
+  deploy:
+   replicas: 3
+   placement:
+    constraints:
+     - node.labels.perf == low
+...
